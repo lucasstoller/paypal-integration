@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Checkout Page</title>
+  <script src="https://www.paypal.com/sdk/js?client-id=Ab8caB34oP4a8GHjJXExSs8x_4rRvZWm5KPmZ7mNpuCmcOKNMjc5g68lWDr4Js7zA1M_0dh6kRpG0xEr"></script>
+  <!-- Include jQuery for AJAX calls if not already included -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <%= csrf_meta_tags %>
+</head>
+<body>
+  <h2>Checkout</h2>
+  <div id="paypal-button-container"></div>
+  
+  <%= yield %>
+
+  <script>
+    paypal.Buttons({
+      createOrder: function(paypalData, actions) {
+        console.log(`paypalData: ${JSON.stringify(paypalData)}`)
+        return fetch('/orders', {
+          method: 'post',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({ 
+            amount: 100,
+            currency: 'USD'
+          })
+        }).then(function(res) {
+          return res.json();
+        }).then(function(backendData) {
+          console.log(`backendData: ${JSON.stringify(backendData)}`)
+          let orderID = backendData.paypal_order_id;
+          console.log(orderID)
+          return orderID;
+        });
+      },
+      onApprove: function(paypalData, actions) {
+        console.log(`paypalData: ${JSON.stringify(paypalData)}`)
+        let { orderID } = paypalData
+        return fetch(`/orders/${orderID}/capture`, {
+          method: 'post',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({
+          })
+        }).then(function(res) {
+          return res.json();
+        }).then(function(backendData) {
+          console.log(`backendData: ${backendData}`)
+          // Handle the response from your server
+          if (backendData.status === 'success') {
+            alert('Transaction completed by');
+            // Redirect or handle post-transaction flow
+          } else {
+            // Handle errors or unsuccessful capture
+            alert('Transaction could not be completed. Please try again.');
+          }
+        });
+      }
+    }).render('#paypal-button-container');
+  </script>
+</body>
+</html>
+
